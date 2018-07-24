@@ -69,4 +69,15 @@ summary(m) # Yosemite is more sensitive than the rest of the clusters
 
 ggplot(years_psme[years_psme$plot.id=="HEN1",], aes(ppt, bai.comb)) + geom_point() + facet_wrap(~tree.id)
 
-ggplot(years_psme, aes(voronoi.area, bai.comb)) + geom_point() + facet_wrap(~plot.id)
+ggplot(years_psme, aes(voronoi.area, bai.comb)) + geom_point(aes(color=plot.id), legend=F) # noisy positive relationship between voronoi area (lower density) and growth
+
+m <- lmer(bai.comb ~ ba.prev.comb.std*cluster + ppt.z*voronoi.area + (1|plot.id/tree.id), data=years_psme)
+summary(m) # Yosemite is more sensitive than the rest of the clusters 
+
+# just look at the southernmost cluster
+m <- lmer(bai.comb ~ ba.prev.comb.std*voronoi.area*ppt.z + (1|plot.id/tree.id), data=years_psme[which(years_psme$cluster=="Sierra"),])
+summary(m) # here lower density (higher voronoi.area) associated with faster growth of large trees
+
+# just look at Yosemite
+m <- lmer(bai.comb ~ ba.prev.comb.std*voronoi.area*ppt.z + (1|plot.id/tree.id), data=years_psme[which(years_psme$cluster=="Yose"),])
+summary(m) # but not here
