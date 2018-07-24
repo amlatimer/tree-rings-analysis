@@ -51,33 +51,3 @@ p
 # No obvious difference between trees' basal area that's measured from core out (ba, bai) and basal area that's measured from outside in (ba.ext, bai.ext). Therefore, proceed with using the combined data for now (ba.comb, bai.comb). 
 
 
-#### Simplistic analysis: are there differences in growth rates by species? 
-
-years$ba.prev.comb.std <- scale(years$ba.prev.comb)
-years$ba.comb.std <- scale(years$ba.comb)
-m <- lm(ba.comb.std ~ ba.prev.comb.std*species, data=years)
-summary(m)
-
-# Are there differences in sensitivity to ppt by species? 
-m <- lmer(bai.comb ~ ba.prev.comb.std*species + ppt.z*species + (1|tree.id), data=years)
-summary(m) # not a ton, but 
-
-# Are there differences in sensitivity to ppt by cluster within PSME? 
-years_psme <- years[which(years$species=="PSME"),]
-m <- lmer(bai.comb ~ ba.prev.comb.std*cluster + ppt.z*cluster + (1|plot.id/tree.id), data=years_psme)
-summary(m) # Yosemite is more sensitive than the rest of the clusters 
-
-ggplot(years_psme[years_psme$plot.id=="HEN1",], aes(ppt, bai.comb)) + geom_point() + facet_wrap(~tree.id)
-
-ggplot(years_psme, aes(voronoi.area, bai.comb)) + geom_point(aes(color=plot.id), legend=F) # noisy positive relationship between voronoi area (lower density) and growth
-
-m <- lmer(bai.comb ~ ba.prev.comb.std*cluster + ppt.z*voronoi.area + (1|plot.id/tree.id), data=years_psme)
-summary(m) # Yosemite is more sensitive than the rest of the clusters 
-
-# just look at the southernmost cluster
-m <- lmer(bai.comb ~ ba.prev.comb.std*voronoi.area*ppt.z + (1|plot.id/tree.id), data=years_psme[which(years_psme$cluster=="Sierra"),])
-summary(m) # here lower density (higher voronoi.area) associated with faster growth of large trees
-
-# just look at Yosemite
-m <- lmer(bai.comb ~ ba.prev.comb.std*voronoi.area*ppt.z + (1|plot.id/tree.id), data=years_psme[which(years_psme$cluster=="Yose"),])
-summary(m) # but not here
