@@ -5,6 +5,7 @@ library(ggplot2)
 library(sp)
 library(lme4)
 library(maps)
+library(zoo)
 
 years <- read.csv("../data/years.csv")
 trees <- read.csv("../data/trees.csv")
@@ -30,7 +31,7 @@ levels(trees$species)
 trees <- merge(trees, plots[, c("plot.id", "cluster")], sort=FALSE, by = "plot.id", all=FALSE)
 
 # Add cluster and plot ID and species to years data set
-years <- merge(years, trees[, c("tree.id", "plot.id", "cluster", "species", "voronoi.area")], sort=FALSE, by = "tree.id", all=FALSE)
+years <- merge(years, trees[, c("tree.id", "plot.id", "cluster", "species", "voronoi.area")], sort=FALSE, by = "tree.id", all=TRUE)
 
 # Create relative growth rate (RGR) and log-RGR response variables
 years$rgr.comb <- years$ba.comb / years$ba.prev.comb
@@ -44,8 +45,8 @@ plot(bai.comb~ba.comb, years[years$rgr.comb<=1.1,])
 
   
 # Standardize explanatory variables
-vars_to_scale <- c("ba.comb", "ba.prev.comb", "ppt", "ppt.z", "tmean", "tmean.z")
-for (i in 1:length(vars_to_scale)) years[,vars_to_scale[i]] <- scale(years[,vars_to_scale[i]])
+#vars_to_scale <- c("ba.comb", "ba.prev.comb", "ppt", "ppt.z", "tmean", "tmean.z")
+#for (i in 1:length(vars_to_scale)) years[,vars_to_scale[i]] <- scale(years[,vars_to_scale[i]])
 
 # how many trees have BAI data for each year?
 with(years, table(bai.pres=!is.na(bai.comb), year)) # most years have values for most trees
@@ -82,8 +83,17 @@ d <- years[which(years$species=="PSME") ,]
 ggplot(d, aes(year, ppt.z)) + geom_line(aes(col=plot.id)) + facet_wrap(~cluster) 
 # Pretty consistent pattern across whole data set. Very consistent within clusters. Extreme dry years were 1976 and 1977. 2013-2014 and 1987-88 were next biggest dry spikes, with below-average precip extending through 1992. Weaker dry spell in 2007-2008. 
 # Wettest years were 1982-83, followed by 2006 and 1969, 1995, 1998, 2006, 2011. 
-ggplot(d, aes(year, ppt.z)) + geom_hist(aes(col=plot.id)) + facet_wrap(~cluster)
-
+ggplot(d, aes(year, ppt.z)) + geom_histogram(aes(col=plot.id)) + facet_wrap(~cluster)
+ggplot(d, aes(year, ppt)) + geom_histogram(aes(col=plot.id)) + facet_wrap(~cluster)
+# There are distinct clumps of "high" vs "low" years, i.e. precipiation is somewhat bimodal. 
+# When looking at absolute ppt values, most of the years in Plumas and Tahoe are wet, while most years in Yose and Sierra are dry. Clear N-S gradient in overal precipiation. 
+# No obvious trend in variability over time 
+cv <- function(x) {return(sd(x, na.rm=T)/mean(x, na.rm=T))}
+plot(1964:2009,rollapply(years[which(d$tree.id=="1089"),"ppt"], 10, cv), col="blue", lwd=3, type="l", ylim=c(0.2,0.6), ylab="CV precipitation", xlab="year") # plumas
+lines(1964:2009, rollapply(years[which(d$tree.id=="1411"),"ppt"], 10, cv),  col="yellow3",lwd=3) # sierra
+#lines(1964:2009, rollapply(years[which(d$tree.id=="1172"),"ppt"], 10, cv), col="cyan3",lwd=3) # tahoe
+#lines(1964:2009, rollapply(years[which(d$tree.id=="1427"),"ppt"], 10, cv), col="orange3",lwd=3) # yose
+# Overall CV precipitation is higher in the sourh, and it stays high throughout. Whereas in the north (plumas), CV is low at the beginning and the end of the time series, and spikes during the 1970s drought and early 90s. 
 
 # Visual check: plot bai (growth) versus precipitation anomaly for each site for individual trees. 
 # by plot
