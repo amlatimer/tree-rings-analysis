@@ -26,11 +26,26 @@ trees$species[trees$species=="PSME "] <- "PSME"
 trees$species <- droplevels(trees$species)
 levels(trees$species)
 
-
 # Add cluster ID to trees data set
 trees <- merge(trees, plots[, c("plot.id", "cluster")], sort=FALSE, by = "plot.id", all=FALSE)
+
 # Add cluster and plot ID and species to years data set
 years <- merge(years, trees[, c("tree.id", "plot.id", "cluster", "species", "voronoi.area")], sort=FALSE, by = "tree.id", all=FALSE)
+
+# Create relative growth rate (RGR) and log-RGR response variables
+years$rgr.comb <- years$ba.comb / years$ba.prev.comb
+hist(years$rgr.comb)
+sum(is.na(years$rgr.comb)) / nrow(years)
+sum(!is.na(years$rgr.comb))
+sum(years$rgr.comb > 1.1, na.rm=T)
+plot(rgr.comb~ba.comb, years)
+plot(rgr.comb~ba.comb, years[years$rgr.comb<=1.1,]) # RGR is too heavily influenced by tree size at the smaller end to use
+plot(bai.comb~ba.comb, years[years$rgr.comb<=1.1,]) 
+
+  
+# Standardize explanatory variables
+  vars_to_scale <- c("bai.comb", "ba.comb", "ba.prev.comb", "ppt", "ppt.z", "tmean", "tmean.z")
+for (i in 1:length(vars_to_scale)) years[,vars_to_scale[i]] <- scale(years[,vars_to_scale[i]])
 
 # how many trees have BAI data for each year?
 with(years, table(bai.pres=!is.na(bai.comb), year)) # most years have values for most trees
@@ -49,5 +64,10 @@ unique(plots$plot.id)
 p <- ggplot(years[years$plot.id=="ULC1" & years$species=="PSME",], aes(year, ba.comb)) + geom_line(aes(color = !is.na(ba))) + facet_wrap(~tree.id)
 p
 # No obvious difference between trees' basal area that's measured from core out (ba, bai) and basal area that's measured from outside in (ba.ext, bai.ext). Therefore, proceed with using the combined data for now (ba.comb, bai.comb). 
+
+#### Q1: What are relationships between long-term precipitation and growth rate, interannual precipitation variation and growth rate, accounting for  temperature and tree size? 
+
+
+
 
 
