@@ -127,10 +127,10 @@ for (i in 1:n_trees) {
   sens_all[i] <- coef(lm(rwi~ppt.z, data=tempdata))[2]
   sens_wet[i] <- coef(lm(rwi~ppt.z, data=tempdata[wetyears,]))[2]
   sens_dry[i] <- coef(lm(rwi~ppt.z, data=tempdata[-wetyears,]))[2]
-  wet_dry_diff[i] <- mean(tempdata$rwi[tempdata$year %in% deluge_years]) - mean(tempdata$rwi[tempdata$year %in% drought_years])
-  mean_bai <- 
-  sd_bai <- 
-  mean_ba <- 
+  wet_dry_diff[i] <- mean(tempdata$rwi[tempdata$year %in% deluge_years], na.rm=T) - mean(tempdata$rwi[tempdata$year %in% drought_years], na.rm=T)
+  mean_bai <- mean(tempdata$bai.comb, na.rm=T)
+  sd_bai <- sd(tempdata$bai.comb, na.rm=T)
+  mean_ba <- mean(tempdata$ba.comb, na.rm=T)
 }
 
 hist(sens_all)
