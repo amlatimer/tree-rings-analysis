@@ -1,6 +1,6 @@
-## This file loads and explores preliminary tree-ring data from Derek Young. 
+#### This file loads and explores preliminary tree-ring data from Derek Young. ####
 
-## Load libraries and data
+## Load libraries and data ####
 library(ggplot2)
 library(sp)
 library(lme4)
@@ -11,7 +11,7 @@ years <- read.csv("../data/years.csv")
 trees <- read.csv("../data/trees.csv")
 plots <- read.csv("../data/plots.csv")
 
-## Initial look at the data
+## Initial look at the data ####
 
 head(years)
 head(trees)
@@ -67,14 +67,14 @@ p
 # No obvious difference between trees' basal area that's measured from core out (ba, bai) and basal area that's measured from outside in (ba.ext, bai.ext). Therefore, proceed with using the combined data for now (ba.comb, bai.comb). 
 
 
-#### Q1: What are relationships between long-term precipitation and growth rate, interannual precipitation variation and growth rate, accounting for  temperature and tree size? 
+#### Q1: What are relationships between long-term precipitation and growth rate, interannual precipitation variation and growth rate, accounting for  temperature and tree size? ####
 
 # Specify which subset of data to use for this analysis 
 d <- years[which(years$species=="PSME"),] # Douglas fir only
 
 
 
-### Q2: For each tree, what is its sensitivity to variation in precipiation? 
+#### Q2: For each tree, what is its sensitivity to variation in precipiation? #### 
 
 # Specify which subset of data to use for this analysis 
 d <- years[which(years$species=="PSME") ,]
@@ -93,7 +93,9 @@ plot(1964:2009,rollapply(years[which(d$tree.id=="1089"),"ppt"], 10, cv), col="bl
 lines(1964:2009, rollapply(years[which(d$tree.id=="1411"),"ppt"], 10, cv),  col="yellow3",lwd=3) # sierra
 #lines(1964:2009, rollapply(years[which(d$tree.id=="1172"),"ppt"], 10, cv), col="cyan3",lwd=3) # tahoe
 #lines(1964:2009, rollapply(years[which(d$tree.id=="1427"),"ppt"], 10, cv), col="orange3",lwd=3) # yose
+legend("topright", c("Sierra (S)", "Plumas (N)"), col=c("yellow3", "blue"), lwd=c(3, 3))
 # Overall CV precipitation is higher in the sourh, and it stays high throughout. Whereas in the north (plumas), CV is low at the beginning and the end of the time series, and spikes during the 1970s drought and early 90s. 
+
 
 # Visual check: plot bai (growth) versus precipitation anomaly for each site for individual trees. 
 # by plot
@@ -112,6 +114,38 @@ ggplot(d, aes(ppt.z, rwi)) + geom_point(aes(col = factor(year>1990))) + facet_wr
 ggplot(d, aes(ppt.z, bai.comb)) + geom_point(aes(col = factor(year>1990))) + facet_wrap(~plot.id)
 # not obviously, but there are some differences in mean and possibly sensitivity.
 
+## Calculate sensitivity metrics for each tree for whole time period ####
+length(unique(years$tree.id)) == nrow(trees)
+n_trees <- nrow(trees)
+drought_years <- c(1976, 1977, 2013, 2014, 1987, 1988, 2013, 2014)
+deluge_years <- c(1982, 1983, 2006, 1969, 1995, 1998, 2006, 2011)
+sens_all <- sens_wet <- sens_dry <- wet_dry_diff <- mean_bai <- sd_bai <- mean_ba <- rep(0, n_trees)
 
+for (i in 1:n_trees) { 
+  tempdata <- years[years$tree.id==trees$tree.id[i],]
+  wetyears <- which(tempdata$ppt.z >= 0)
+  sens_all[i] <- coef(lm(rwi~ppt.z, data=tempdata))[2]
+  sens_wet[i] <- coef(lm(rwi~ppt.z, data=tempdata[wetyears,]))[2]
+  sens_dry[i] <- coef(lm(rwi~ppt.z, data=tempdata[-wetyears,]))[2]
+  wet_dry_diff[i] <- mean(tempdata$rwi[tempdata$year %in% deluge_years]) - mean(tempdata$rwi[tempdata$year %in% drought_years])
+  mean_bai <- 
+  sd_bai <- 
+  mean_ba <- 
+}
 
+hist(sens_all)
+plot(sens_dry~sens_all, ylim=c(-0.5, 0.5), xlim=c(-0.5, 0.5))
+abline(c(0,1))
+plot(sens_wet~sens_all)
+abline(c(0,1))
 
+sens_diff <- sens_wet-sens_dry
+hist(sens_diff, nclass=20)
+quantile(sens_diff, na.rm=T)
+plot(sens_diff~sens_all, ylim=c(-0.5, 0.5), xlim=c(-0.5, 0.5)) # no strong association between difference in sensitivity between wet and dry, and overall sensitivity 
+
+hist(wet_dry_diff)
+plot(wet_dry_diff~sens_all)
+cor(wet_dry_diff, sens_all, use="pairwise.complete") # Sensitivity from regression coef is strongly correlated with wet minus dry year difference in RWI
+
+ggplot()
