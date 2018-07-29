@@ -1,4 +1,10 @@
-#### This file loads and explores preliminary tree-ring data from Derek Young. ####
+#### Preliminary analysis of tree-ring data from Derek Young's PSME project. ####
+## This script: 
+# - loads, checks, and merges data 
+# - creates metrics of individual tree-level growth and sensitivity of growth to precipitation
+# - checks for overall trends in growth and sensitivity versus long-term site characteristics (average precip, temp, solar radiation)
+# - checks for associations between sensitivity and growth rate, and between these and long-term site characteristics
+
 
 ## Load libraries and data ####
 library(ggplot2)
@@ -11,8 +17,9 @@ years <- read.csv("../data/years.csv")
 trees <- read.csv("../data/trees.csv")
 plots <- read.csv("../data/plots.csv")
 
-## Initial look at the data ####
+## Clean up and merge the data sets ####
 
+# Initial data check
 head(years)
 head(trees)
 length(unique(trees$tree.id)) # how many trees? (774)
@@ -20,7 +27,7 @@ min(years$year); max(years$year) # how many years (55)
 length(unique(trees$plot.id)) # how many plots? (63)
 table(trees$species) # how many trees of each species?
 
-# fix problem with PSME id
+# Fix problem with PSME id
 levels(trees$species)
 trees$species[trees$species==""] <- NA
 trees$species[trees$species=="PSME "] <- "PSME"
@@ -31,36 +38,37 @@ levels(trees$species)
 years <- merge(years, plots[, c( "plot.id", "cluster", "ppt.norm", "tmean.norm", "rad.tot", "rad.03", "rad.06")])
 head(years)
 
+# Add measured dbh (size of tree when the plot was visited) to the years data set
+years <- merge(years, trees[,c("tree.id", "dbh")], by = "tree.id")
+
 # Add cluster ID to trees data set
 trees <- merge(trees, plots[, c("plot.id", "cluster")], sort=FALSE, by = "plot.id")
 
-# Standardize explanatory variables
-#vars_to_scale <- c("ba.comb", "ba.prev.comb", "ppt", "ppt.z", "tmean", "tmean.z")
-#for (i in 1:length(vars_to_scale)) years[,vars_to_scale[i]] <- scale(years[,vars_to_scale[i]])
-
-# how many trees have BAI data for each year?
+# Check how many trees have BAI data for each year
 with(years, table(bai.pres=!is.na(bai.comb), year)) # most years have values for most trees
 with(years, table(bai.pres=!is.na(bai), year)) # about 2/3 of trees have "pith-based" BA for any given year. 
 table(years$tree.id[!is.na(years$ba)])
 table(years$cluster[!is.na(years$ba)])
 table(years$cluster[!is.na(years$ba.comb)])
 
-# Where are the plots?
+# Display plots on a map
 treelocs <- SpatialPoints(coords=trees[,c("x", "y")], proj4string = CRS("+proj=albers"))
 plot(treelocs, pch=16, col=trees$species)
 
-# Visulize some individual tree growth trends for trees with basal area measured from inside out, and from outside in. 
+# Check some individual tree growth trends for trees with basal area measured from inside out and see if there are any obvious differences from those measured from outside in. 
 years_psme <- years[years$species=="PSME",]
 unique(plots$plot.id)
 p <- ggplot(years[years$plot.id=="ULC1" & years$species=="PSME",], aes(year, ba.comb)) + geom_line(aes(color = !is.na(ba))) + facet_wrap(~tree.id)
 p
-# No obvious difference between trees' basal area that's measured from core out (ba, bai) and basal area that's measured from outside in (ba.ext, bai.ext). Therefore, proceed with using the combined data for now (ba.comb, bai.comb). 
+# No obvious difference between trees' basal area that's measured from core out (ba, bai) and basal area that's measured from outside in (ba.ext, bai.ext). Therefore, proceed using the combined data (ba.comb, bai.comb). 
 
 
 #### Q1: What are relationships between long-term precipitation and growth rate, interannual precipitation variation and growth rate, accounting for  temperature and tree size? ####
 
 # Specify which subset of data to use for this analysis 
 d <- years[which(years$species=="PSME"),] # Douglas fir only
+
+
 
 
 
