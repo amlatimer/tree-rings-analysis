@@ -13,9 +13,20 @@ library(lme4)
 library(maps)
 library(zoo)
 
-years <- read.csv("../data/years.csv")
-trees <- read.csv("../data/trees.csv")
-plots <- read.csv("../data/plots.csv")
+# Load filtered data, which removes "problematic" chronologies and segments that don't align well with the reference chronology without adding/deleting rings, or not (leaves those trees in). 
+load_filtered <- FALSE
+
+if (load_filtered) {
+  years <- read.csv("../data/filtered/years.csv")
+  trees <- read.csv("../data/filtered/trees.csv")
+  plots <- read.csv("../data/filtered/plots.csv")
+} else { 
+  years <- read.csv("../data/unfiltered/years.csv")
+  trees <- read.csv("../data/unfiltered/trees.csv")
+  plots <- read.csv("../data/unfiltered/plots.csv")
+}
+
+
 
 ## Clean up and merge the data sets ####
 
@@ -39,7 +50,7 @@ years <- merge(years, plots[, c( "plot.id", "cluster", "ppt.norm", "tmean.norm",
 head(years)
 
 # Add measured dbh (size of tree when the plot was visited) to the years data set
-years <- merge(years, trees[,c("tree.id", "dbh")], by = "tree.id")
+years <- merge(years, trees[,c("tree.id", "dbh", "species")], by = "tree.id")
 
 # Add cluster ID to trees data set
 trees <- merge(trees, plots[, c("plot.id", "cluster")], sort=FALSE, by = "plot.id")
@@ -66,9 +77,14 @@ p
 #### Q1: What are relationships between long-term precipitation and growth rate, interannual precipitation variation and growth rate, accounting for  temperature and tree size? ####
 
 # Specify which subset of data to use for this analysis 
-d <- years[which(years$species=="PSME"),] # Douglas fir only
+d <- years[which(years$species=="PSME"),] # focus on Douglas fir only
 
+# Standardize explanatory variables
+vars_to_scale <- c("ba.comb", "ba.prev.comb", "ppt.z", "tmean.z", "rad.tot", "ppt.norm", "tmean.norm") 
+for (i in 1:length(vars_to_scale)) d[,vars_to_scale[i]] <- scale(d[,vars_to_scale[i]])
 
+# Fit model
+m1_q1 <- lm(bai.comb~ba.prev.comb + ppt.norm + tmean.norm + ppt.z + tmean.z + rad.tot, data=d)
 
 
 
