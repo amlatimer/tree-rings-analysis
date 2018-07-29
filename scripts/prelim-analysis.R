@@ -27,23 +27,13 @@ trees$species[trees$species=="PSME "] <- "PSME"
 trees$species <- droplevels(trees$species)
 levels(trees$species)
 
+# Add plot-level data to years data set 
+years <- merge(years, plots[, c( "plot.id", "cluster", "ppt.norm", "tmean.norm", "rad.tot", "rad.03", "rad.06")])
+head(years)
+
 # Add cluster ID to trees data set
-trees <- merge(trees, plots[, c("plot.id", "cluster")], sort=FALSE, by = "plot.id", all=FALSE)
+trees <- merge(trees, plots[, c("plot.id", "cluster")], sort=FALSE, by = "plot.id")
 
-# Add cluster and plot ID and species to years data set
-years <- merge(years, trees[, c("tree.id", "plot.id", "cluster", "species", "voronoi.area")], sort=FALSE, by = "tree.id", all=TRUE)
-
-# Create relative growth rate (RGR) and log-RGR response variables
-years$rgr.comb <- years$ba.comb / years$ba.prev.comb
-hist(years$rgr.comb)
-sum(is.na(years$rgr.comb)) / nrow(years)
-sum(!is.na(years$rgr.comb))
-sum(years$rgr.comb > 1.1, na.rm=T)
-plot(rgr.comb~ba.comb, years)
-plot(rgr.comb~ba.comb, years[years$rgr.comb<=1.1,]) # RGR is too heavily influenced by tree size at the smaller end to use
-plot(bai.comb~ba.comb, years[years$rgr.comb<=1.1,]) 
-
-  
 # Standardize explanatory variables
 #vars_to_scale <- c("ba.comb", "ba.prev.comb", "ppt", "ppt.z", "tmean", "tmean.z")
 #for (i in 1:length(vars_to_scale)) years[,vars_to_scale[i]] <- scale(years[,vars_to_scale[i]])
@@ -128,10 +118,12 @@ for (i in 1:n_trees) {
   sens_wet[i] <- coef(lm(rwi~ppt.z, data=tempdata[wetyears,]))[2]
   sens_dry[i] <- coef(lm(rwi~ppt.z, data=tempdata[-wetyears,]))[2]
   wet_dry_diff[i] <- mean(tempdata$rwi[tempdata$year %in% deluge_years], na.rm=T) - mean(tempdata$rwi[tempdata$year %in% drought_years], na.rm=T)
-  mean_bai <- mean(tempdata$bai.comb, na.rm=T)
-  sd_bai <- sd(tempdata$bai.comb, na.rm=T)
-  mean_ba <- mean(tempdata$ba.comb, na.rm=T)
+  mean_bai[i] <- mean(tempdata$bai.comb, na.rm=T)
+  sd_bai[i] <- sd(tempdata$bai.comb, na.rm=T)
+  mean_ba[i] <- mean(tempdata$ba.comb, na.rm=T)
 }
+
+sensdata <- data.frame(tree.id = trees$tree.id, sens_all, sens_wet, sens_dry,  wet_dry_diff, mean_bai, sd_bai, mean_ba)
 
 hist(sens_all)
 plot(sens_dry~sens_all, ylim=c(-0.5, 0.5), xlim=c(-0.5, 0.5))
@@ -148,4 +140,6 @@ hist(wet_dry_diff)
 plot(wet_dry_diff~sens_all)
 cor(wet_dry_diff, sens_all, use="pairwise.complete") # Sensitivity from regression coef is strongly correlated with wet minus dry year difference in RWI
 
-ggplot()
+# plot absolute growth vs sensitivity
+ggplot(sensdata, aes(y=mean_bai, x=sens_all)) + geom_point()
+ggplot(sensdata, aes(y=mean_ba, x=sens_all)) + geom_point()
