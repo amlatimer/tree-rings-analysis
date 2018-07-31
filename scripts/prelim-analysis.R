@@ -1,5 +1,6 @@
 #### Preliminary analysis of tree-ring data from Derek Young's PSME project. ####
 ## This script: 
+# - can be run on filtered vs unfiltered data to check sensitivity of results to filtering.
 # - loads, checks, and merges data 
 # - creates metrics of individual tree-level growth and sensitivity of growth to precipitation
 # - checks for overall trends in growth and sensitivity versus long-term site characteristics (average precip, temp, solar radiation)
@@ -27,13 +28,12 @@ if (load_filtered) {
 }
 
 
-
 ## Clean up and merge the data sets ####
 
 # Initial data check
 head(years)
 head(trees)
-length(unique(trees$tree.id)) # how many trees? (774)
+length(unique(trees$tree.id)) # how many trees? (776)
 min(years$year); max(years$year) # how many years (55)
 length(unique(trees$plot.id)) # how many plots? (63)
 table(trees$species) # how many trees of each species?
@@ -67,11 +67,12 @@ treelocs <- SpatialPoints(coords=trees[,c("x", "y")], proj4string = CRS("+proj=a
 plot(treelocs, pch=16, col=trees$species)
 
 # Check some individual tree growth trends for trees with basal area measured from inside out and see if there are any obvious differences from those measured from outside in. 
-years_psme <- years[years$species=="PSME",]
 unique(plots$plot.id)
 p <- ggplot(years[years$plot.id=="ULC1" & years$species=="PSME",], aes(year, ba.comb)) + geom_line(aes(color = !is.na(ba))) + facet_wrap(~tree.id)
 p
 # No obvious difference between trees' basal area that's measured from core out (ba, bai) and basal area that's measured from outside in (ba.ext, bai.ext). Therefore, proceed using the combined data (ba.comb, bai.comb). 
+
+
 
 
 #### Q1: What are relationships between long-term precipitation and growth rate, interannual precipitation variation and growth rate, accounting for  temperature and tree size? ####
@@ -80,13 +81,37 @@ p
 d <- years[which(years$species=="PSME"),] # focus on Douglas fir only
 
 # Standardize explanatory variables
-vars_to_scale <- c("ba.comb", "ba.prev.comb", "ppt.z", "tmean.z", "rad.tot", "ppt.norm", "tmean.norm") 
+vars_to_scale <- c("bai.comb", "ba.comb", "ba.prev.comb", "ppt.z", "tmean.z", "rad.tot", "ppt.norm", "tmean.norm", "dbh") 
 for (i in 1:length(vars_to_scale)) d[,vars_to_scale[i]] <- scale(d[,vars_to_scale[i]])
 
 # Fit model
-m1_q1 <- lm(bai.comb~ba.prev.comb + ppt.norm + tmean.norm + ppt.z + tmean.z + rad.tot, data=d)
+plot(bai.comb~ppt.norm, d[d$year==1990,])
+m1_q1 <- lm(bai.comb~ppt.norm + tmean.norm + ppt.z + tmean.z + rad.tot, data=d)
+summary(m1_q1)
 
 
+#### CHECKING POTENTIAL DATA PROBLEM ####
+# Weirdly appears no variation among trees that can be explained by long-term climate. 
+# Does this persist if we average up to the tree level? 
+testdata_early <- aggregate(years$bai.comb[years$year >= 1990], by=list(years$tree.id[years$year >= 1990]), FUN=mean, na.rm=TRUE)
+testdata_late <- aggregate(years$bai.comb[years$year < 1990], by=list(years$tree.id[years$year < 1990]), FUN=mean, na.rm=TRUE)
+names(testdata_early) <- names(testdata_late) <- c("tree.id", "bai.comb.mean")
+testdata_early <- merge(testdata_early, trees[,c("tree.id", "plot.id", "dbh", "species")], by = "tree.id")
+testdata_late <- merge(testdata_late, trees[,c("tree.id", "plot.id", "dbh", "species")], by = "tree.id")
+testdata_early <- merge(testdata_early, plots, by = "plot.id")
+testdata_late <- merge(testdata_late, plots, by = "plot.id")
+head(testdata)
+cor(testdata)
+summary(lm(bai.comb.mean~ppt.norm * rad.tot + dbh + species , testdata_early))
+summary(lm(bai.comb.mean~ppt.norm * rad.tot + dbh + species , testdata_late))
+summary(lm(bai.comb.mean~ppt.norm+tmean.norm+rad.tot , testdata))
+plot(bai.comb.mean~ppt.norm , testdata)
+plot(voronoi.area.mean ~ ppt.norm, testdata)
+# No -- averaged up to tree level, we do see effect of overall precip on growth. 
+
+# What if we go back to the whole data set and account for some of the variation using random effects? 
+m <- lmer(bai.comb ~ ba.prev.comb + ppt.norm + rad.tot + ppt.z + (1|plot.id/tree.id), data = d)
+summary(m)
 
 #### Q2: For each tree, what is its sensitivity to variation in precipiation? #### 
 
