@@ -13,9 +13,10 @@ library(sp)
 library(lme4)
 library(maps)
 library(zoo)
+library(MuMIn)
 
 # Load filtered data, which removes "problematic" chronologies and segments that don't align well with the reference chronology without adding/deleting rings, or not (leaves those trees in). 
-load_filtered <- FALSE
+load_filtered <- TRUE
 
 if (load_filtered) {
   years <- read.csv("../data/filtered/years.csv")
@@ -66,13 +67,8 @@ table(years$cluster[!is.na(years$ba.comb)])
 treelocs <- SpatialPoints(coords=trees[,c("x", "y")], proj4string = CRS("+proj=albers"))
 plot(treelocs, pch=16, col=trees$species)
 
-# Check some individual tree growth trends for trees with basal area measured from inside out and see if there are any obvious differences from those measured from outside in. 
-unique(plots$plot.id)
-p <- ggplot(years[years$plot.id=="ULC1" & years$species=="PSME",], aes(year, ba.comb)) + geom_line(aes(color = !is.na(ba))) + facet_wrap(~tree.id)
-p
-# No obvious difference between trees' basal area that's measured from core out (ba, bai) and basal area that's measured from outside in (ba.ext, bai.ext). Therefore, proceed using the combined data (ba.comb, bai.comb). 
-
-
+# Display growth rates of some trees vs time 
+ggplot(years[years$plot.id=="ULC1",], aes(x=year, y=rwi)) + geom_line() + facet_wrap(~tree.id)
 
 
 #### Q1: What are relationships between long-term precipitation and growth rate, interannual precipitation variation and growth rate, accounting for  temperature and tree size? ####
@@ -112,6 +108,11 @@ plot(voronoi.area.mean ~ ppt.norm, testdata)
 # What if we go back to the whole data set and account for some of the variation using random effects? 
 m <- lmer(bai.comb ~ ba.prev.comb + ppt.norm + rad.tot + ppt.z + (1|plot.id/tree.id), data = d)
 summary(m)
+r.squaredGLMM(m)
+#  Compare to using RWI
+m <- lm(rwi ~ tmean.z * ppt.z + ba.prev.comb*ppt.z, data = d)
+summary(m)
+r.squaredGLMM(m)
 
 #### Q2: For each tree, what is its sensitivity to variation in precipiation? #### 
 
@@ -158,12 +159,16 @@ length(unique(years$tree.id)) == nrow(trees)
 n_trees <- nrow(trees)
 drought_years <- c(1976, 1977, 2013, 2014, 1987, 1988, 2013, 2014)
 deluge_years <- c(1982, 1983, 2006, 1969, 1995, 1998, 2006, 2011)
-sens_all <- sens_wet <- sens_dry <- wet_dry_diff <- mean_bai <- sd_bai <- mean_ba <- rep(0, n_trees)
+sens_all <- sens_all_bai <- sens_all_early <- sens_all_late <- sens_wet <- sens_dry <- wet_dry_diff <- mean_bai <- sd_bai <- mean_ba <- rep(0, n_trees)
 
+# loop over trees to calculate sensitivity and associated metrics
 for (i in 1:n_trees) { 
   tempdata <- years[years$tree.id==trees$tree.id[i],]
   wetyears <- which(tempdata$ppt.z >= 0)
   sens_all[i] <- coef(lm(rwi~ppt.z, data=tempdata))[2]
+  #sens_all_bai[i] <- coef(lm(bai.comb~ba.prev.comb + ppt.z, data=tempdata))[3]
+  #sens_all_early[i] <- coef(lm(rwi~ppt.z, data=tempdata, subset=tempdata$year<1990))[2]
+  #sens_all_late[i] <- coef(lm(rwi~ppt.z, data=tempdata, subset=tempdata$year>=1990))[2]
   sens_wet[i] <- coef(lm(rwi~ppt.z, data=tempdata[wetyears,]))[2]
   sens_dry[i] <- coef(lm(rwi~ppt.z, data=tempdata[-wetyears,]))[2]
   wet_dry_diff[i] <- mean(tempdata$rwi[tempdata$year %in% deluge_years], na.rm=T) - mean(tempdata$rwi[tempdata$year %in% drought_years], na.rm=T)
@@ -172,7 +177,9 @@ for (i in 1:n_trees) {
   mean_ba[i] <- mean(tempdata$ba.comb, na.rm=T)
 }
 
-sensdata <- data.frame(tree.id = trees$tree.id, sens_all, sens_wet, sens_dry,  wet_dry_diff, mean_bai, sd_bai, mean_ba)
+sensdata <- data.frame(tree.id = trees$tree.id, sens_all, sens_all_wet, sens_all_dry, wet_dry_diff, mean_bai, sd_bai, mean_ba)
+sensdata <- merge(sensdata, trees, by="tree.id")
+sensdata <- merge(sensdata, plots, by="plot.id")
 
 hist(sens_all)
 plot(sens_dry~sens_all, ylim=c(-0.5, 0.5), xlim=c(-0.5, 0.5))
@@ -190,5 +197,15 @@ plot(wet_dry_diff~sens_all)
 cor(wet_dry_diff, sens_all, use="pairwise.complete") # Sensitivity from regression coef is strongly correlated with wet minus dry year difference in RWI
 
 # plot absolute growth vs sensitivity
-ggplot(sensdata, aes(y=mean_bai, x=sens_all)) + geom_point()
-ggplot(sensdata, aes(y=mean_ba, x=sens_all)) + geom_point()
+ggplot(sensdata, aes(y=sens_all, x=mean_bai)) + theme_light() + geom_point() + facet_wrap(~cluster) + stat_smooth(method="lm")
+
+# plot sensitivity vs normal precipitation
+sensdata$hirad <- as.numeric(sensdata$rad.tot > mean(sensdata$rad.tot))
+
+ggplot(sensdata, aes(y=sens_all, x=ppt.norm, group=hirad, col=hirad)) + theme_light() + geom_point() + stat_smooth(method="lm") #+ facet_wrap(~cluster.x)
+
+ggplot(sensdata[which(sensdata$cluster.x=="Plumas"),], aes(y=sens_all, x=ppt.norm, group=hirad, col=hirad)) + theme_light() + geom_point() + stat_smooth(method="lm") #+ facet_wrap(~cluster.x)
+
+
+
+        
