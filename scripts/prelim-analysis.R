@@ -68,7 +68,7 @@ treelocs <- SpatialPoints(coords=trees[,c("x", "y")], proj4string = CRS("+proj=a
 plot(treelocs, pch=16, col=trees$species)
 
 # Display growth rates of some trees vs time 
-ggplot(years[years$plot.id=="ULC1",], aes(x=year, y=rwi)) + geom_line() + facet_wrap(~tree.id)
+ggplot(years[years$plot.id=="SSC5B",], aes(x=year, y=rwi)) + geom_line() + facet_wrap(~tree.id)
 
 
 #### Q1: What are relationships between long-term precipitation and growth rate, interannual precipitation variation and growth rate, accounting for  temperature and tree size? ####
