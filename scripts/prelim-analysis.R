@@ -16,7 +16,7 @@ library(zoo)
 library(MuMIn)
 
 # Load filtered data, which removes "problematic" chronologies and segments that don't align well with the reference chronology without adding/deleting rings, or not (leaves those trees in). 
-load_filtered <- TRUE
+load_filtered <- FALSE
 
 if (load_filtered) {
   years <- read.csv("../data/filtered/years.csv")
@@ -68,7 +68,7 @@ treelocs <- SpatialPoints(coords=trees[,c("x", "y")], proj4string = CRS("+proj=a
 plot(treelocs, pch=16, col=trees$species)
 
 # Display growth rates of some trees vs time 
-ggplot(years[years$plot.id=="SSC5B",], aes(x=year, y=rwi)) + geom_line() + facet_wrap(~tree.id)
+#ggplot(years[years$plot.id=="SSC5B",], aes(x=year, y=rwi)) + geom_line() + facet_wrap(~tree.id) # something wrong with this! 
 
 
 #### Q1: What are relationships between long-term precipitation and growth rate, interannual precipitation variation and growth rate, accounting for  temperature and tree size? ####
@@ -177,9 +177,11 @@ for (i in 1:n_trees) {
   mean_ba[i] <- mean(tempdata$ba.comb, na.rm=T)
 }
 
-sensdata <- data.frame(tree.id = trees$tree.id, sens_all, sens_all_wet, sens_all_dry, wet_dry_diff, mean_bai, sd_bai, mean_ba)
+sensdata <- data.frame(tree.id = trees$tree.id, sens_all, sens_wet, sens_dry, wet_dry_diff, mean_bai, sd_bai, mean_ba)
 sensdata <- merge(sensdata, trees, by="tree.id")
 sensdata <- merge(sensdata, plots, by="plot.id")
+
+write.csv(sensdata, "../working-data/sensitivity-metrics.csv")
 
 hist(sens_all)
 plot(sens_dry~sens_all, ylim=c(-0.5, 0.5), xlim=c(-0.5, 0.5))
