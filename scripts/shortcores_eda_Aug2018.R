@@ -8,9 +8,9 @@
 
 library(lme4); library(ggplot2); library(lattice)
 
-setwd("/Volumes/GoogleDrive/My Drive/TreeDrought")
-d = read.csv("JunAug2015_w_treerings.csv")
-head(d)
+d = read.csv("../data/short-core/JunAug2015_w_treerings.csv")
+sensdata <- read.csv("../working-data/sensitivity-metrics.csv")
+
 
 ## Visualize correlations in data ####
 
@@ -32,6 +32,8 @@ points(RWC_Aug~plot.deficit, d, pch=16, col="orange3")
 abline(coef(lm(RWC_Aug~plot.deficit, d)),lwd=2, col="orange3")
 
 plot(STARCH~plot.deficit, d, pch=16, col="cyan4")
+plot(STARCH~DBH, d, pch=16, col="cyan4")
+summary(lm(STARCH~DBH, d))
 
 plot(dRWC~plot.deficit, d, pch=16, col="orange3")
 plot(STARCH~dRWC, d, pch=16, col="orange3") # weak hint of assn between water drop and starch
@@ -107,13 +109,6 @@ anova(lm(Density~PLOT, d)) # most variation in density within plot, about 1/3 am
 plot(Density~plot.deficit, d, pch=16, col="brown")
 plot(Density~plot.elev.m, d, pch=16, col="brown") # no association of density with defict or elevation
 
-summary(lm(dKh.dt~Density, d))
-
-
-plot(TNSC~Density, d)
-plot(STARCH~Density, d)
-
-
 
 plot(dKh~Density, d, pch=16, col="brown")
 abline(coef(lm(dKh~Density, d)), lwd=3, col="gray")
@@ -123,16 +118,29 @@ par(pty="s")
 plot(dKh.dt~Density, d, pch=16, col="brown", xlab="Wood density", ylab="Reduction in conductance", cex.axis=1.2, cex.lab=1.5)
 abline(coef(lm(dKh.dt~Density, d)), lwd=3, col="gray")
 
+# wood density vs carbohydrates
+plot(TNSC~Density, d)
+summary(lm(TNSC~Density, d)) # weak
 
+plot(STARCH~Density, d)
+summary(lm(STARCH~Density, d)) # nothing
 
 ## comparing to long-term sensitivity
-### NEED TO MERGE WITH SENSITIVITY METRICS FROM TREE RING ANALYSIS
+d <- merge(d, sensdata, by="tree.id")
+head(d)
 
 
+ggplot(d, aes(x=sens_all, y=dKh)) + geom_point() + geom_smooth(method="lm") + theme_classic()
+ggplot(d, aes(x=sens_all, y=STARCH)) + geom_point() + geom_smooth(method="lm") + theme_classic() # strong correlation 
+ggplot(d, aes(x=sens_all, y=TNSC)) + geom_point() + geom_smooth(method="lm") + theme_classic() # weaker
+ggplot(d, aes(x=sens_all, y=RWC_Aug)) + geom_point() + geom_smooth(method="lm") + theme_classic()
+ggplot(d, aes(x=sens_all, y=RWC_June)) + geom_point() + geom_smooth(method="lm") + theme_classic()
+ggplot(d, aes(x=sens_all, y=dKh)) + geom_point() + geom_smooth(method="lm") + theme_classic() # weak negative slope
+ggplot(d, aes(x=sens_all, y=dKh.dt)) + geom_point() + geom_smooth(method="lm") + theme_classic() #nothing 
 
-p= qplot(Density, dKh.dt,  data=d, geom=c("point", "smooth"), method="lm") 
-p = p+ theme_bw()
-p
+
+ggplot(d, aes(x=sens_all, y=dKh.dt)) + geom_point() + geom_smooth(method="lm") + theme_classic()
+
 summary(lm(dKh.dt~Density, d))
 summary(lmer(dKh.dt~Density+(1|PLOT), d))
 

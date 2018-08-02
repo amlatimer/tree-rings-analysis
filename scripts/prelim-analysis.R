@@ -220,7 +220,10 @@ ggplot(sensdata[which(sensdata$cluster.x=="Plumas"),], aes(y=sens_all, x=ppt.nor
 # rename refuge plots
 
 d.refinc <- years #trees.clim.rwi
-d.refinc <- subset(d.refinc,(year > 19) & (year < 2015))
+
+# Set time interval to look at
+d.refinc <- subset(d.refinc,(year > 1994) & (year < 2015))
+#d.refinc <- subset(d.refinc,(year > 1960) & (year < 1990))
 
 refuge.trees <- c("2589","2590","1222","2550","2551","2552")
 refuge.plots <- c("SB01","RT02C","RS01")
@@ -232,20 +235,24 @@ d.refinc$type <- ifelse(d.refinc$tree.id %in% refuge.trees,"refugium","standard"
 ## PSME only
 d.refinc <- d.refinc[d.refinc$species == "PSME",]
 
+# Fit model using RGR of basal area
 m <- lm(bai.ba.comb ~ plot.id*ppt.z + plot.id*type + ppt.z*type ,data=d.refinc)
+# Alternatively, fit model using RWI
+#m <- lm(rwi ~ plot.id*ppt.z + plot.id*type + ppt.z*type ,data=d.refinc)
+
 
 
 ppt.z.seq <- seq(from=-2,to=2,length.out=100)
 
-
+# Make projections for multiple refugia areas separately
 nd.r.1 <- data.frame(plot.id="SB01",ppt.z=ppt.z.seq,type="refugium")
 nd.s.1 <- data.frame(plot.id="SB01",ppt.z=ppt.z.seq,type="standard")
 nd.r.2 <- data.frame(plot.id="RT02C",ppt.z=ppt.z.seq,type="refugium")
 nd.s.2 <- data.frame(plot.id="RT02C",ppt.z=ppt.z.seq,type="standard")
 nd.r.3 <- data.frame(plot.id="RS01",ppt.z=ppt.z.seq,type="refugium")
 nd.s.3 <- data.frame(plot.id="RS01",ppt.z=ppt.z.seq,type="standard")
-
 newdata <- rbind(nd.r.1,nd.s.1,nd.r.2,nd.s.2,nd.r.3,nd.s.3)
+
 
 
 pred <- as.data.frame(predict(m,newdata=newdata,interval="confidence"))
@@ -269,10 +276,16 @@ p <- ggplot(pred,aes(x=ppt.z,y=fit,colour=type,fill=type)) +
   labs(x="Precipitation anomaly",y="Relative growth rate") +
   scale_color_manual(values=c("#1A4D1B","#009999"),name="Type") +
   scale_fill_manual(values=c("#1A4D1B","#009999"),name="Type")
+p
 
 library(Cairo)
 Cairo(file="test2.png",typ="png",width=960,height=600)
 p
 dev.off()
 
+
+#### Pictures of tree growth for ESA slide show ####
+par(mfrow=c(2,1))
+plot(rwi~year, years[years$tree.id==1231,], pch=16, col="slateblue", xlab="Year", ylab="Ring width index", cex.axis=1.2, cex.lab=1.4)
+plot(bai.comb/10000~year, years[years$tree.id==1231,], pch=16, col="darkgreen", xlab="Year", ylab="Growth (basal area increment)", cex.axis=1.2, cex.lab=1.4)
         
