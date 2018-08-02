@@ -210,4 +210,69 @@ ggplot(sensdata[which(sensdata$cluster.x=="Plumas"),], aes(y=sens_all, x=ppt.nor
 
 
 
+#########################################################
+###### Plot PSME growth in refugium vs. non-refugium ####
+#########################################################
+# Adapted from Derek's script: dendro_weather_analysis_p2.plot.R
+
+#are trees from refugium sites less sensitive?
+
+# rename refuge plots
+
+d.refinc <- years #trees.clim.rwi
+d.refinc <- subset(d.refinc,(year > 19) & (year < 2015))
+
+refuge.trees <- c("2589","2590","1222","2550","2551","2552")
+refuge.plots <- c("SB01","RT02C","RS01")
+
+d.refinc <- d.refinc[d.refinc$plot.id %in% refuge.plots,]
+
+d.refinc$type <- ifelse(d.refinc$tree.id %in% refuge.trees,"refugium","standard")
+
+## PSME only
+d.refinc <- d.refinc[d.refinc$species == "PSME",]
+
+m <- lm(bai.ba.comb ~ plot.id*ppt.z + plot.id*type + ppt.z*type ,data=d.refinc)
+
+
+ppt.z.seq <- seq(from=-2,to=2,length.out=100)
+
+
+nd.r.1 <- data.frame(plot.id="SB01",ppt.z=ppt.z.seq,type="refugium")
+nd.s.1 <- data.frame(plot.id="SB01",ppt.z=ppt.z.seq,type="standard")
+nd.r.2 <- data.frame(plot.id="RT02C",ppt.z=ppt.z.seq,type="refugium")
+nd.s.2 <- data.frame(plot.id="RT02C",ppt.z=ppt.z.seq,type="standard")
+nd.r.3 <- data.frame(plot.id="RS01",ppt.z=ppt.z.seq,type="refugium")
+nd.s.3 <- data.frame(plot.id="RS01",ppt.z=ppt.z.seq,type="standard")
+
+newdata <- rbind(nd.r.1,nd.s.1,nd.r.2,nd.s.2,nd.r.3,nd.s.3)
+
+
+pred <- as.data.frame(predict(m,newdata=newdata,interval="confidence"))
+
+pred <- cbind(pred,newdata)
+
+
+library(ggplot2)
+
+pred$type <- factor(pred$type,levels=rev(levels(pred$type)))
+
+pred$plot.id <- as.numeric(pred$plot.id)
+pred$plot.id <- paste("P",pred$plot.id,sep="")
+
+
+p <- ggplot(pred,aes(x=ppt.z,y=fit,colour=type,fill=type)) +
+  geom_line(size=1) +
+  geom_ribbon(aes(ymin=lwr,ymax=upr),linetype=0,alpha=0.5) +
+  facet_grid(. ~ plot.id,scales="free_x",space="free_x") +
+  theme_bw(20) +
+  labs(x="Precipitation anomaly",y="Relative growth rate") +
+  scale_color_manual(values=c("#1A4D1B","#009999"),name="Type") +
+  scale_fill_manual(values=c("#1A4D1B","#009999"),name="Type")
+
+library(Cairo)
+Cairo(file="test2.png",typ="png",width=960,height=600)
+p
+dev.off()
+
         
