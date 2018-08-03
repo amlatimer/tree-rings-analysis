@@ -285,7 +285,15 @@ dev.off()
 
 
 #### Pictures of tree growth for ESA slide show ####
-par(mfrow=c(2,1))
-plot(rwi~year, years[years$tree.id==1231,], pch=16, col="slateblue", xlab="Year", ylab="Ring width index", cex.axis=1.2, cex.lab=1.4)
-plot(bai.comb/10000~year, years[years$tree.id==1231,], pch=16, col="darkgreen", xlab="Year", ylab="Growth (basal area increment)", cex.axis=1.2, cex.lab=1.4)
+plotdata <- years[years$tree.id==1231,]
+plotdata <- plotdata[order(plotdata$year),]
+par(mfrow=c(2,1), mar=rep(4, 4), pty="m")
+plot(rwi~year, plotdata, pch=16, col="slateblue", xlab="Year", ylab="Ring width index", cex.axis=1.2, cex.lab=1.2, type="l", lwd=3)
+plot(bai.comb/10000~year, plotdata, pch=16, col="darkgreen", xlab="Year", ylab="Growth", cex.axis=1.2, cex.lab=1.2, type="l", lwd=3)
+
+par(mfrow=c(1,1), mar=rep(5, 4), pty="m")
+plot(ppt.z~year, plotdata, pch=16, col="blue", xlab="Year", ylab="Precipitation anomaly", cex.axis=1.2, cex.lab=1.5, type="l", lwd=3)
+
+
+ggplot(plotdata, aes(x=ppt.z, y=rwi)) + geom_point() + theme_classic(20) + geom_smooth(method="lm") + labs(x="Precipitation anomaly",y="Ring width index")
         

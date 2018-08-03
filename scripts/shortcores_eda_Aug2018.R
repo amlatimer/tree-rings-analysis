@@ -119,9 +119,10 @@ plot(dKh.dt~Density, d, pch=16, col="brown", xlab="Wood density", ylab="Reductio
 abline(coef(lm(dKh.dt~Density, d)), lwd=3, col="gray")
 
 # wood density vs carbohydrates
-plot(TNSC~Density, d)
+par(pty="s")
+plot(TNSC~Density, d, pch=16, col="brown", xlab="Wood density", ylab="Total non-structural carbs", cex.axis=1.2, cex.lab=1.5)
+abline(coef(lm(TNSC~Density, d)), lwd=3, lty=2, col="gray")
 summary(lm(TNSC~Density, d)) # weak
-
 plot(STARCH~Density, d)
 summary(lm(STARCH~Density, d)) # nothing
 
@@ -135,6 +136,7 @@ ggplot(d, aes(x=sens_all, y=STARCH)) + geom_point() + geom_smooth(method="lm") +
 ggplot(d, aes(x=sens_all, y=TNSC)) + geom_point() + geom_smooth(method="lm") + theme_classic() # weaker
 ggplot(d, aes(x=sens_all, y=RWC_Aug)) + geom_point() + geom_smooth(method="lm") + theme_classic()
 ggplot(d, aes(x=sens_all, y=RWC_June)) + geom_point() + geom_smooth(method="lm") + theme_classic()
+ggplot(d, aes(x=sens_all, y=dRWC)) + geom_point() + geom_smooth(method="lm") + theme_classic(20) + labs(x="Precipitation sensitivity",y="Decline in water content")
 ggplot(d, aes(x=sens_all, y=dKh)) + geom_point() + geom_smooth(method="lm") + theme_classic() # weak negative slope
 ggplot(d, aes(x=sens_all, y=dKh.dt)) + geom_point() + geom_smooth(method="lm") + theme_classic() #nothing 
 
